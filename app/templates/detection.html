@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeepFake Detection Portal</title>
+    <link rel="stylesheet" href="static/style.css" />
+    <style>
+      .result-badge {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.3rem;
+        margin-left: 10px;
+      }
+      .badge-fake {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 2px solid #ef4444;
+      }
+      .badge-real {
+        background-color: #dcfce7;
+        color: #16a34a;
+        border: 2px solid #22c55e;
+      }
+      .result-details {
+        margin-top: 15px;
+        font-size: 1rem;
+        color: #4b5563;
+        background: #f9fafb;
+        padding: 12px 18px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+      }
+      .preview-container {
+        margin-top: 20px;
+        max-width: 500px;
+      }
+      .preview-img {
+        max-width: 100%;
+        max-height: 350px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+      .upload-box {
+        background: #ffffff;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        max-width: 550px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="one">
+      <header>
+        <a href="index.html" class="logo">
+          <img src="static/face.jpg" width="50px" style="border-radius: 50%;" />DeepFake Detector
+        </a>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="detection.html">Detection</a></li>
+          <li><a href="about.html">About us</a></li>
+        </ul>
+      </header>
+
+      <div class="content">
+        <h2>Upload Media for Detection</h2>
+        <h3>
+          Upload a video (.mp4, .avi, .mov) or a photo (.jpg, .png) to determine whether it is authentic or a DeepFake.
+        </h3>
+        <br />
+
+        <div class="upload-box" id="submit-form">
+          <input
+            id="file-input"
+            type="file"
+            name="media"
+            accept=".mp4,.avi,.mov,.mkv,.webm,.jpg,.jpeg,.png,.webp"
+            style="margin-bottom: 12px; display: block; font-size: 1rem;"
+          />
+          <button id="upload-btn" style="cursor: pointer;"><b>Analyze File</b></button>
+        </div>
+
+        <div class="containAll hidden" style="margin-top: 25px;">
+          <div class="containLoader">
+            <div class="circleGroup circle-1"></div>
+            <div class="circleGroup circle-2"></div>
+            <div class="circleGroup circle-3"></div>
+            <div class="circleGroup circle-4"></div>
+            <div class="circleGroup circle-5"></div>
+            <div class="circleGroup circle-6"></div>
+            <div class="circleGroup circle-7"></div>
+            <div class="circleGroup circle-8"></div>
+            <div class="innerText">
+              <p>Analyzing...</p>
+            </div>
+          </div>
+        </div>
+
+        <br />
+
+        <div class="result hidden" style="margin-top: 15px;">
+          <h2>
+            Verdict:
+            <span class="result-badge" id="result-badge">---</span>
+          </h2>
+          <div class="result-details" id="result-details"></div>
+        </div>
+
+        <div class="preview-container">
+          <img id="image-preview" class="preview-img hidden" alt="Media Preview" />
+          <video class="video hidden" width="480" height="270" controls style="border-radius: 12px;"></video>
+        </div>
+      </div>
+
+      <img src="static/detection.png" class="three" width="450px" />
+    </section>
+
+    <script>
+      const input = document.getElementById("file-input");
+      const video = document.querySelector(".video");
+      const videoSource = document.createElement("source");
+      const imgPreview = document.getElementById("image-preview");
+      const sideGraphic = document.querySelector(".three");
+      let selectedFile = null;
+
+      input.addEventListener("change", function () {
+        const files = this.files || [];
+        if (!files.length) return;
+        selectedFile = files[0];
+
+        // Hide previous results
+        document.querySelector(".result").classList.add("hidden");
+
+        const fileName = selectedFile.name.toLowerCase();
+        const isVideo = fileName.endsWith(".mp4") || fileName.endsWith(".avi") || fileName.endsWith(".mov") || fileName.endsWith(".webm") || fileName.endsWith(".mkv");
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          if (isVideo) {
+            imgPreview.classList.add("hidden");
+            video.classList.remove("hidden");
+            videoSource.setAttribute("src", e.target.result);
+            if (!video.contains(videoSource)) {
+              video.appendChild(videoSource);
+            }
+            video.load();
+          } else {
+            video.classList.add("hidden");
+            imgPreview.src = e.target.result;
+            imgPreview.classList.remove("hidden");
+          }
+        };
+        reader.readAsDataURL(selectedFile);
+      });
+
+      const uploadButton = document.querySelector("#upload-btn");
+      const progressBarContainer = document.querySelector(".containAll");
+      const resultElement = document.querySelector(".result");
+      const resultBadge = document.querySelector("#result-badge");
+      const resultDetails = document.querySelector("#result-details");
+
+      uploadButton.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (!selectedFile) {
+          alert("Please select an image or video file first!");
+          return;
+        }
+
+        resultElement.classList.add("hidden");
+        progressBarContainer.classList.remove("hidden");
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("video", selectedFile); // backwards compatibility
+
+        try {
+          const response = await fetch("/predict", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+          progressBarContainer.classList.add("hidden");
+
+          if (!response.ok || data.success === false) {
+            alert("Analysis error: " + (data.error || "Unknown server error"));
+            return;
+          }
+
+          showResult(data);
+        } catch (err) {
+          progressBarContainer.classList.add("hidden");
+          console.error(err);
+          alert("Connection failed: " + err.message);
+        }
+      });
+
+      function showResult(data) {
+        resultElement.classList.remove("hidden");
+        const label = (data.prediction_label || "Unknown").toUpperCase();
+        resultBadge.textContent = label;
+
+        if (label === "FAKE") {
+          resultBadge.className = "result-badge badge-fake";
+        } else if (label === "REAL") {
+          resultBadge.className = "result-badge badge-real";
+        } else {
+          resultBadge.className = "result-badge";
+        }
+
+        let detailsHtml = `<strong>Confidence:</strong> ${data.confidence || "N/A"}<br>`;
+        if (data.type === "video") {
+          detailsHtml += `<strong>Frames Analyzed:</strong> ${data.frames_analyzed || 0} (${data.fake_frames || 0} Fake, ${data.real_frames || 0} Real)<br>`;
+        }
+        detailsHtml += `<strong>Probability Real:</strong> ${(data.prob_real * 100).toFixed(2)}% | <strong>Probability Fake:</strong> ${(data.prob_fake * 100).toFixed(2)}%`;
+        resultDetails.innerHTML = detailsHtml;
+      }
+    </script>
+  </body>
+</html>
