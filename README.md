@@ -78,8 +78,8 @@ graph LR
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/DeepFake-Detection.git
-cd DeepFake-Detection
+git clone https://github.com/Aarav-Shah-175/Deepfake-Detection.git
+cd Deepfake-Detection
 ```
 
 ### 2. Create a Virtual Environment (Recommended)

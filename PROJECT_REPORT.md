@@ -125,8 +125,8 @@ Deepfake_Unified/
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/DeepFake-Detection.git
-cd DeepFake-Detection
+git clone https://github.com/Aarav-Shah-175/Deepfake-Detection.git
+cd Deepfake-Detection
 ```
 *(If running locally from the current workspace, navigate to `d:\Project- Academic\AI\Deepfake_Unified`)*.
 
